@@ -9,18 +9,20 @@ from flask_login import LoginManager
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 
+# Database base class
 class Base(DeclarativeBase):
     pass
 
 db = SQLAlchemy(model_class=Base)
 
-# Create the app
+# Create the Flask app
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "default-dev-secret-key")
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 # Configure the database
 app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL", "sqlite:///app.db")
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     "pool_recycle": 300,
     "pool_pre_ping": True,
@@ -63,20 +65,27 @@ def load_user(user_id):
     from models.models import User
     return User.query.get(int(user_id))
 
-# Import routes and models
+# Import and register API Blueprints
+from api.auth import bp as auth_bp
+from api.internships import bp as internships_bp
+from api.tasks import bp as tasks_bp
+from api.supervisor import bp as supervisor_bp
+
+app.register_blueprint(auth_bp)
+app.register_blueprint(internships_bp)
+app.register_blueprint(tasks_bp)
+app.register_blueprint(supervisor_bp)
+
+# Startup data initialization
 with app.app_context():
     try:
-        from api import auth, internships, tasks, supervisor
         from models.models import User, UserProfile, Industry, InternshipTrack, Task, Submission, Certificate, AdminUser, Company
-        
-        # Create tables
         db.create_all()
 
-        # Initialize data if needed
         from api.init_data import initialize_data
         initialize_data()
 
         logging.info("Database and initial data setup completed successfully.")
     except Exception as e:
         logging.error(f"Initialization error: {e}")
-        logging.warning("Backend started without database initialization.")
+        logging.warning("Backend started without full database initialization.")
