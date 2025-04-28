@@ -17,9 +17,9 @@ db = SQLAlchemy(model_class=Base)
 # Create the app
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "default-dev-secret-key")
-app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)  # Needed for url_for to generate with https
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
-# Configure the database, relative to the app instance folder
+# Configure the database
 app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL", "sqlite:///app.db")
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     "pool_recycle": 300,
@@ -50,7 +50,7 @@ app.config["AZURE_SEARCH_INDEX"] = os.environ.get("AZURE_SEARCH_INDEX", "interns
 app.config["AZURE_FUNCTION_ENDPOINT"] = os.environ.get("AZURE_FUNCTION_ENDPOINT")
 app.config["AZURE_FUNCTION_KEY"] = os.environ.get("AZURE_FUNCTION_KEY")
 
-# Initialize the app with extensions
+# Initialize extensions
 db.init_app(app)
 
 # Setup login manager
@@ -65,12 +65,18 @@ def load_user(user_id):
 
 # Import routes and models
 with app.app_context():
-    from api import auth, internships, tasks, supervisor
-    from models.models import User, UserProfile, Industry, InternshipTrack, Task, Submission, Certificate, AdminUser, Company
-    
-    # Create tables
-    db.create_all()
+    try:
+        from api import auth, internships, tasks, supervisor
+        from models.models import User, UserProfile, Industry, InternshipTrack, Task, Submission, Certificate, AdminUser, Company
+        
+        # Create tables
+        db.create_all()
 
-    # Initialize data if needed
-    from api.init_data import initialize_data
-    initialize_data()
+        # Initialize data if needed
+        from api.init_data import initialize_data
+        initialize_data()
+
+        logging.info("Database and initial data setup completed successfully.")
+    except Exception as e:
+        logging.error(f"Initialization error: {e}")
+        logging.warning("Backend started without database initialization.")
