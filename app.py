@@ -60,17 +60,17 @@ login_manager.login_view = 'login'
 
 @login_manager.user_loader
 def load_user(user_id):
-    from backend.models.models import User
+    from models.models import User
     return User.query.get(int(user_id))
 
 # Import routes and models
 with app.app_context():
-    from backend.api import auth, internships, tasks, supervisor
-    from backend.models.models import User, UserProfile, Industry, InternshipTrack, Task, Submission, Certificate, AdminUser, Company
+    from api import auth, internships, tasks, supervisor
+    from models.models import User, UserProfile, Industry, InternshipTrack, Task, Submission, Certificate, AdminUser, Company
     
     # Create tables
     db.create_all()
 
     # Initialize data if needed
-    from backend.api.init_data import initialize_data
+    from api.init_data import initialize_data
     initialize_data()
